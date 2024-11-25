@@ -299,6 +299,21 @@ export const routerAbi = [
         stateMutability: "nonpayable",
         type: "function",
     },
+    {
+        inputs: [
+            { name: "amountIn", type: "uint256" },
+            { name: "amountOutMin", type: "uint256" },
+            { name: "path", type: "address[]" },
+            { name: "to", type: "address" },
+            { name: "deadline", type: "uint256" }
+        ],
+        name: "swapExactTokensForETH",
+        outputs: [
+            { name: "amounts", type: "uint256[]" }
+        ],
+        stateMutability: "nonpayable",
+        type: "function"
+    }
 ] as const;
 
 export const wethAbi = [
