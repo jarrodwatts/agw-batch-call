@@ -1,8 +1,7 @@
 import { encodeFunctionData, parseUnits } from "viem";
 import { AbstractClient } from "@abstract-foundation/agw-client";
-import { erc20Abi, routerAbi, wethAbi } from "@/const/abi";
+import { erc20Abi, routerAbi } from "@/const/abi";
 import { useState } from "react";
-import { publicClient } from "@/lib/viem";
 
 // Constants for the addresses
 const ROUTER_ADDRESS = "0x07551c0Daf6fCD9bc2A398357E5C92C139724Ef3";
@@ -19,71 +18,73 @@ const SwapButton = ({ agwClient }: SwapButtonProps) => {
   const handleAddLiquidity = async () => {
     setIsProcessing(true);
     try {
-      const tokenAmount = parseUnits("0.0001", 18); // Amount of MyToken
-      const wethAmount = parseUnits("0.0001", 18); // Amount of WETH
-      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20); // 20 minutes
+      const tokenAmount = parseUnits("0.0001", 18);
+      const wethAmount = parseUnits("0.0001", 18);
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20);
 
-      console.log("1. Approving MyToken...");
-      const approveMyToken = await agwClient.sendTransaction({
-        to: TOKEN_ADDRESS,
-        functionName: "approve",
-        args: [ROUTER_ADDRESS, tokenAmount],
-        account: agwClient.account.address,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [ROUTER_ADDRESS, tokenAmount],
-        }),
-        value: 0n,
-      });
-      console.log("MyToken approval hash:", approveMyToken);
-
-      console.log("2. Approving WETH...");
-      const approveWeth = await agwClient.sendTransaction({
-        to: WETH_ADDRESS,
-        functionName: "approve",
-        args: [ROUTER_ADDRESS, wethAmount],
-        account: agwClient.account.address,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [ROUTER_ADDRESS, wethAmount],
-        }),
-        value: 0n,
-      });
-      console.log("WETH approval hash:", approveWeth);
-
-      console.log("3. Adding liquidity...");
-      const addLiquidityTx = await agwClient.sendTransaction({
-        to: ROUTER_ADDRESS,
-        functionName: "addLiquidity",
-        args: [
-          TOKEN_ADDRESS,
-          WETH_ADDRESS,
-          wethAmount,
-          0n,
-          0n,
-          agwClient.account.address,
-          deadline,
+      console.log("Sending batch transaction...");
+      const batchTx = await agwClient.sendTransactionBatch({
+        calls: [
+          // 1 - MyToken approval
+          {
+            to: TOKEN_ADDRESS,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, tokenAmount],
+            account: agwClient.account.address,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [ROUTER_ADDRESS, tokenAmount],
+            }),
+            value: 0n,
+          },
+          // 2 - WETH approval
+          {
+            to: WETH_ADDRESS,
+            functionName: "approve",
+            args: [ROUTER_ADDRESS, wethAmount],
+            account: agwClient.account.address,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [ROUTER_ADDRESS, wethAmount],
+            }),
+            value: 0n,
+          },
+          // 3 - Add liquidity
+          {
+            to: ROUTER_ADDRESS,
+            functionName: "addLiquidity",
+            args: [
+              TOKEN_ADDRESS,
+              WETH_ADDRESS,
+              tokenAmount,
+              wethAmount,
+              0n,
+              0n,
+              agwClient.account.address,
+              deadline,
+            ],
+            account: agwClient.account.address,
+            data: encodeFunctionData({
+              abi: routerAbi,
+              functionName: "addLiquidity",
+              args: [
+                TOKEN_ADDRESS,
+                WETH_ADDRESS,
+                tokenAmount,
+                wethAmount,
+                0n,
+                0n,
+                agwClient.account.address,
+                deadline,
+              ],
+            }),
+            value: 0n,
+          },
         ],
-        account: agwClient.account.address,
-        data: encodeFunctionData({
-          abi: routerAbi,
-          functionName: "addLiquidity",
-          args: [
-            TOKEN_ADDRESS,
-            WETH_ADDRESS,
-            tokenAmount,
-            wethAmount,
-            0n,
-            0n,
-            agwClient.account.address,
-            deadline,
-          ],
-        }),
       });
-      console.log("Add liquidity transaction hash:", addLiquidityTx);
-
+      console.log("Batch transaction hash:", batchTx);
       console.log("All transactions completed successfully!");
     } catch (error) {
       console.error("Transaction failed:", error);
@@ -92,42 +93,8 @@ const SwapButton = ({ agwClient }: SwapButtonProps) => {
     }
   };
 
-  const getWeth = async () => {
-    try {
-      console.log("Wrapping ETH to WETH...");
-      const wrapEthTx = await agwClient.sendTransaction({
-        to: WETH_ADDRESS,
-        functionName: "deposit",
-        account: agwClient.account.address,
-        data: encodeFunctionData({
-          abi: wethAbi,
-          functionName: "deposit",
-        }),
-        value: parseUnits("0.0001", 18), // Sending 0.0001 ETH
-      });
-      console.log("Wrap ETH transaction hash:", wrapEthTx);
-
-      // Check WETH balance after wrapping
-      const wethBalance = await publicClient.readContract({
-        address: WETH_ADDRESS,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [agwClient.account.address],
-      });
-      console.log("New WETH balance:", wethBalance);
-    } catch (error) {
-      console.error("Failed to get WETH:", error);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-2">
-      <button
-        onClick={getWeth}
-        className="w-full bg-secondary hover:bg-secondary-dark text-white font-bold py-2 px-4 rounded transition-colors duration-200"
-      >
-        Get WETH (Test)
-      </button>
       <button
         onClick={handleAddLiquidity}
         disabled={isProcessing}
