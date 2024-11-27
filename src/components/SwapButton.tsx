@@ -51,29 +51,17 @@ const SwapButton = ({ agwClient }: SwapButtonProps) => {
           // 1 - MyToken approval
           {
             to: TOKEN_ADDRESS,
-            functionName: "approve",
             args: [ROUTER_ADDRESS, tokenAmount],
-            account: agwClient.account.address,
             data: encodeFunctionData({
               abi: erc20Abi,
               functionName: "approve",
               args: [ROUTER_ADDRESS, tokenAmount],
             }),
-            value: 0n,
           },
 
           // 2 - Swap exact tokens for ETH
           {
             to: ROUTER_ADDRESS,
-            functionName: "swapExactTokensForETH",
-            args: [
-              tokenAmount,
-              0n,
-              [TOKEN_ADDRESS, WETH_ADDRESS],
-              agwClient.account.address,
-              deadline,
-            ],
-            account: agwClient.account.address,
             data: encodeFunctionData({
               abi: routerAbi,
               functionName: "swapExactTokensForETH",
@@ -85,7 +73,6 @@ const SwapButton = ({ agwClient }: SwapButtonProps) => {
                 deadline,
               ],
             }),
-            value: 0n,
           },
         ],
       });
